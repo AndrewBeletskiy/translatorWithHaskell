@@ -2,3 +2,8 @@ main.hi
 main.o
 factorial.txt
 test.txt
+main.exe
+Types.o
+Types.hi
+LexicalAnalyzer.o
+LexicalAnalyzer.hi
