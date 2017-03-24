@@ -1,0 +1,29 @@
+<prog>        ::= {<op.list>}
+<op.list>     ::= <operator>;|<op.list>;<operator>;
+<operator>    ::= <assignment>|<input>|<output>|<if>|<loop>
+<input>       ::= read(<id.list>)
+<id.list>     ::= <id>|<id.list>,<id>
+<output>      ::= write(<outlist>)
+<outlist>     ::= <outelement>|<outlist>,<outelement>
+<outelement>  ::= <id>|<string>
+<id>          ::= <letter>|<id><letter>|<id><digit>
+<letter>      ::= a|b|c|…|z|A|B|C|…|Z
+<digit>       ::= 0|1|2|…|9
+<string>      ::= “<charlist>”
+<charlist>    ::= <char>|<charlist><char>
+<char>        ::= <letter>|<digit>|.|,|=|;|:|/|\|!
+<assignment>  ::= <id>:=<expr>
+<expr>        ::= <term>|<expr>+<term>|<expr>-<term>
+<term>        ::= <multiplier>|<term>*<multiplier>|<term><multiplier>
+<multiplier>  ::= (<expr>)|<float>|<id>
+<if>          ::= if <logicalexpr> then <operator> else <operator>
+<logicalexpr> ::= <logterm>|<logicalexpr> or <logterm>
+<logterm>     ::= <logmult>|<logterm> and <logmult> 
+<logmult>     ::= <relation>|[<logicalexpr>]|not <logmult>
+<relation>    ::= <expr><rel.sign><expr>
+<rel.sign>    ::= > | < | >= | <= | = | !=
+<loop>        ::= do while (<лог. вир>); <op.list> end
+<float>       ::= <fixed>|<fixed>E<order>
+<order>       ::= <int>|<sign><int>
+<fixed>       ::= <int>|<int>.<int>|.<int>
+<цбз>         ::= <digit>|<int><digit>
