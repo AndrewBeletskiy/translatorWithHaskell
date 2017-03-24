@@ -4,35 +4,38 @@ import Data.Char
 import Data.List
 import Types
 
-convertToMyString :: String -> [MyChar]
-convertToMyString str = markAll str 1 1
-    where markAll all@(x:xs) curLine curColumn
-            | null xs = [(MyChar x (Position curLine curColumn))]
-            | x == '\n' = (MyChar '\n' (Position curLine curColumn)) : markAll xs (curLine + 1) 1
-            | otherwise = (MyChar x (Position curLine curColumn)) : markAll xs curLine (curColumn + 1)
+lexicalAnalyzer :: String -> Either [Lexeme] String
+lexicalAnalyzer text = f (convertToMyString text) 1 [] []
+    where 
+        f [] state curStr res
+            | state < 0 = Right curStr
+            | state == 1 = Left (reverse res)
+            | otherwise = Right ("Error! Unexpected end of file. Current string: '"++ curStr ++ "'")
+        f code@(x:xs) state curStr res
+            | state < 0 = Right curStr
+            | otherwise = let nextStateStrRes = changeState x state curStr res  
+                          in f xs (fst' nextStateStrRes) (snd' nextStateStrRes) (thrd' nextStateStrRes)
+        changeState chr state curStr res
+            | otherwise = (-1, "There is no such situation in automat!", [])
+            where cls = getCharClass chr
+        thrd' (_,_,x) = x
+        snd' (_,x,_) = x
+        fst' (x,_,_) = x
 
---{-
-possibleLexemes :: [Char] -> [Char] -> [MyWord]
-possibleLexemes str terms = splitMy (convertToMyString str) terms
+getCharClass (MyChar val _)
+            | val `elem` " \n\r\t" = CharClassEmpty
+            | or[and[val >= 'a', val <='z'],and[val >= 'a', val <='z']] = CharClassLetter
+            | isDigit val = CharClassDigit
+            | val `elem` "{}()[]+-*/;,\\" = CharClassDelimiter
+            | val == ':' = CharClassColon
+            | val == '=' = CharClassEqual
+            | val == '>' = CharClassMore 
+            | val == '<' = CharClassLess
+            | val == '!' = CharClassExclamationPoint
+            | val == '\"' = CharClassQuote
+            | val == '.' = CharClassPoint
+            | otherwise = CharClassError
 
 
-splitMy::[MyChar] -> [Char] -> [MyWord]
-splitMy str@(x:xs) terms
-    | null str = []
-    | p == -1 = [myCharLstToMyWord str]
-    | p == 0 = (MyWord [value x] (position x)) : (splitMy (tail str) terms)
-    | otherwise = let ch = str !! p 
-                  in (myCharLstToMyWord (take (p-1) str)) 
-                      : MyWord [value ch] (position ch) 
-                      : splitMy (drop (p+1) str) terms
-    where
-        p = fromJ (findIndex (\e -> (value e) `elem` terms) str)
-        fromJ (Just a) = a
-        fromJ (Nothing) = -1
----}
-myCharLstToMyWord :: [MyChar] -> MyWord
-myCharLstToMyWord lst = MyWord (map value lst) (position $ head lst)
 
---findIndexOrEmpty :: (a -> Bool) -> [a] -> Int
---findIndexOrEmpty f lst = findIndex f lst
-
+-- state == 1 = (1, [], (Lexeme curStr BOOL (charPos chr) Nothing) : res)
