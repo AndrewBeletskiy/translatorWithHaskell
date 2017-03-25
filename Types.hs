@@ -63,6 +63,11 @@ getStrLexemeValue (Lexeme val code pos) =
   in f val
 
   
+
 data Lexeme = Lexeme {value :: LexemeValueType, code :: LexemeCode, position :: Position}
+
 instance Show Lexeme where 
     show (Lexeme val code pos) = "\"" ++ (show val) ++ "\" " ++ (show code) ++ (show pos)
+
+getLexemeTableText :: [Lexeme] -> String
+getLexemeTableText lexs = unlines $ map show lexs
