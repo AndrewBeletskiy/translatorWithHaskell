@@ -30,7 +30,7 @@ myCharLstToMyWord :: [MyChar] -> MyWord
 myCharLstToMyWord lst = MyWord (map charVal lst) (charPos $ head lst)
 
 data CharClass = CharClassColon|CharClassDelimiter|CharClassDigit|CharClassEmpty|CharClassEqual|CharClassError|CharClassExclamationPoint|CharClassLess|CharClassLetter|CharClassMore|CharClassPoint|CharClassQuote
-  deriving (Show)
+  deriving (Show, Eq)
 
 
 data LexemeCode = READ|WRITE|IF|THEN
@@ -48,11 +48,6 @@ data LexemeCode = READ|WRITE|IF|THEN
                   |BP|UPL|LABEL|BOOL 
                   deriving (Show)
 
-data Lexeme = Lexeme {value :: String, code :: LexemeCode, position :: Position, classNumber :: Maybe Int}
+data Lexeme = Lexeme {value :: String, code :: LexemeCode, position :: Position}
 instance Show Lexeme where 
-    show (Lexeme val code pos classNumber)
-        | (classNumber == Nothing) = "\"" ++ val ++ "\" " ++ (show code) ++ (show pos)
-        | otherwise = "\"" ++ val ++ "\" " ++ (show code) ++ (show pos) ++ " Ind: " ++ (show $ fromJ classNumber)
-        where 
-            fromJ (Just a) = a
-            fromJ Nothing = -1;
+    show (Lexeme val code pos) = "\"" ++ val ++ "\" " ++ (show code) ++ (show pos)
