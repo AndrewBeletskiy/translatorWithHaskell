@@ -46,7 +46,7 @@ data LexemeCode = READ|WRITE|IF|THEN
                   |LESS_OR_EQUAL|NOT_EQUAL
                   |ID|CONST|STRING
                   |BP|UPL|LABEL|BOOL 
-                  deriving (Show)
+                  deriving (Show, Eq)
 
 data LexemeValueType = StrValue String | NumValue Double
 instance Show LexemeValueType where

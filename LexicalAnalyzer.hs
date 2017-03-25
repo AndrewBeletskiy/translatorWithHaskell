@@ -1,9 +1,7 @@
 module LexicalAnalyzer
 where 
 import Data.Char
-import Data.List
 import Data.Maybe
-import Data.Either
 import Types
 
 lexicalAnalyzer :: String -> Either [Lexeme] String
