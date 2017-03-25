@@ -3,6 +3,7 @@ where
 import Data.Char
 import Data.List
 import Data.Maybe
+import Data.Either
 import Types
 
 lexicalAnalyzer :: String -> Either [Lexeme] String
@@ -23,14 +24,21 @@ lexicalAnalyzer text = f (convertToMyString $ text++" ") 1 [] []
                     (snd' nextStateStrRes) 
                     (thrd' nextStateStrRes)
     changeState chr@(MyChar val pos) state curStr res
+        | cls == CharClassError = (-1, "Illegal character '"
+                                       ++[val]++"' on " 
+                                       ++ (show pos), [])
         | state == 1 = case cls of 
           CharClassLetter ->    (2, val:curStr, res)
           CharClassDigit ->     (3, val:curStr, res)
-          CharClassPoint ->     (4, val:curStr, res)
+          CharClassPoint ->     (4, val:'0':curStr, res)
           CharClassQuote ->     (9, val:curStr, res)
-          CharClassDelimiter -> (1, [], (Lexeme [val] (findLexemCodeOrID [val]) pos):res)
+          CharClassDelimiter -> 
+            (1, [], (Lexeme (StrValue [val])
+                           (findLexemeCodeOrID [val]) 
+                           pos)
+                    :res)
           CharClassColon ->     (10, val:curStr, res)
-          CharClassEqual ->     (1, [], (Lexeme [val] EQUAL pos):res)
+          CharClassEqual ->     (1, [], (Lexeme (StrValue [val]) EQUAL pos):res)
           CharClassMore ->      (11, val:curStr, res)
           CharClassLess ->      (12, val:curStr, res)
           CharClassExclamationPoint -> (13, val:curStr, res)
@@ -38,23 +46,37 @@ lexicalAnalyzer text = f (convertToMyString $ text++" ") 1 [] []
           otherwise ->          (-1, "Illegal character '"
                                      ++[val]++"' on " 
                                      ++ (show pos), [])
-        | state == 2 = case cls of CharClassLetter -> (2, val:curStr, res)
-                                   CharClassDigit -> (2, val:curStr, res)
-                                   otherwise -> (changeState chr 1 [] 
-                                                 $ (Lexeme (reverse curStr) 
-                                                           (findLexemCodeOrID $ reverse curStr) 
-                                                           pos):res)
-        | cls == CharClassError = (-1, "Illegal character '"
-                                       ++[val]++"' on " 
-                                       ++ (show pos), [])
-        | otherwise = (-1, "There is no such situation in automat!"++(show state)++" "++(show chr), [])
+        | state == 2 = case cls of 
+          CharClassLetter -> (2, val:curStr, res)
+          CharClassDigit ->  (2, val:curStr, res)
+          otherwise -> 
+            (changeState chr 1 [] 
+                         $ (Lexeme (StrValue (reverse curStr))
+                                   (findLexemeCodeOrID $ reverse curStr)
+                                   pos):res)
+        | and [state == 3
+              ,or[val == 'e'
+                 ,val == 'E'
+                 ]
+              ] = (6, val:curStr, res)
+        | state == 3 = case cls of 
+          CharClassDigit -> (3, val:curStr, res)
+          CharClassPoint -> (5, val:curStr, res)
+          otherwise -> 
+            (changeState chr 1 [] 
+                         $ (Lexeme (NumValue ((read $ reverse curStr)::Double))
+                                   CONST
+                                   pos):res)
+
+        | otherwise = (-1, "There is no such situation in automat!"
+                            ++(show state)++" "++(show chr), [])
         where cls = getCharClass chr
     thrd' (_,_,x) = x
     snd' (_,x,_) = x
     fst' (x,_,_) = x
 
-findLexemCodeOrID :: [Char] -> LexemeCode
-findLexemCodeOrID str = fromMaybe ID $ lookup str strLexemeCodes
+findLexemeCodeOrID :: [Char] -> LexemeCode
+findLexemeCodeOrID str = fromMaybe ID $ lookup str strLexemeCodes
 
 strLexemeCodes :: [([Char], LexemeCode)]
 strLexemeCodes = [("read",READ), 

@@ -48,6 +48,21 @@ data LexemeCode = READ|WRITE|IF|THEN
                   |BP|UPL|LABEL|BOOL 
                   deriving (Show)
 
-data Lexeme = Lexeme {value :: String, code :: LexemeCode, position :: Position}
+data LexemeValueType = StrValue String | NumValue Double
+instance Show LexemeValueType where
+  show (StrValue str) = str
+  show (NumValue n) = (show n)
+
+getIntLexemeValue lex = fromEnum $ getDoubleLexemeValue lex
+getDoubleLexemeValue  (Lexeme val code pos) = 
+  let f (NumValue n) = n
+  in f val
+
+getStrLexemeValue (Lexeme val code pos) = 
+  let f (StrValue str) = str
+  in f val
+
+  
+data Lexeme = Lexeme {value :: LexemeValueType, code :: LexemeCode, position :: Position}
 instance Show Lexeme where 
-    show (Lexeme val code pos) = "\"" ++ val ++ "\" " ++ (show code) ++ (show pos)
+    show (Lexeme val code pos) = "\"" ++ (show val) ++ "\" " ++ (show code) ++ (show pos)
