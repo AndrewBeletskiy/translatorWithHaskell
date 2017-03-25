@@ -67,7 +67,27 @@ lexicalAnalyzer text = f (convertToMyString $ text++" ") 1 [] []
                          $ (Lexeme (NumValue ((read $ reverse curStr)::Double))
                                    CONST
                                    pos):res)
-
+        | state == 4 = case cls of
+          CharClassDigit -> (5, val:curStr, res)
+          otherwise  -> (-1, "Illegal character '"
+                             ++[val]++"' on " 
+                             ++ (show pos)++". Must be a digit after point", [])
+        | and [state == 5
+              ,or[val == 'e'
+                 ,val == 'E'
+                 ]
+              ] = (6, val:curStr, res)
+        | and[state == 5, cls == CharClassDigit] = (5, val:curStr, res)
+        | and[state == 5, (head curStr) == '.'] = 
+            (changeState chr 1 [] 
+                         $ (Lexeme (NumValue ((read $ reverse ('0':curStr))::Double))
+                                   CONST
+                                   pos):res)
+        | state == 5 =
+            (changeState chr 1 [] 
+                         $ (Lexeme (NumValue ((read $ reverse curStr)::Double))
+                                   CONST
+                                   pos):res)
         | otherwise = (-1, "There is no such situation in automat!"
                             ++(show state)++" "++(show chr), [])
         where cls = getCharClass chr
