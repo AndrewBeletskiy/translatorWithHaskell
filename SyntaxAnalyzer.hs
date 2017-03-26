@@ -15,6 +15,7 @@ testProg lst@(x:xs)
     | isJust opListFst = (opListFst, [])
     | null afterOpList = makeSyntaxError lastPos "There must be close curly bracket"
     | (code $ head afterOpList) /= CLOSE_CURLY_BRACKET = makeSyntaxError (position $ head afterOpList) "There must be close curly bracket"
+    | length afterOpList > 1 = makeSyntaxError (position $ afterOpList !! 1) "There is some illegal text after close curly bracket"
     | otherwise = (Nothing, [])
     where opListRes = testOpList xs False
           opListFst = (fst opListRes)
@@ -25,6 +26,9 @@ testOpList :: [Lexeme] -> Bool ->(Maybe String, [Lexeme])
 testOpList [] _ = (Just "There must be operator list but it didn't", [])
 testOpList lst@(x:xs) isWhileLoop
     | isJust opResFst = opRes
+    | and[length opResSnd > 0, code afterOp /= SEMICOLON] = 
+        makeSyntaxError (position afterOp) "There must be a semicolon"
+    | length opResSnd < 2 = (Nothing, opResSnd)
     | code afterOp /= SEMICOLON = makeSyntaxError (position afterOp) "There must be a semicolon after operator"
     | or [and[isWhileLoop, (code (opResSnd !! 1)) == END], 
           and[not isWhileLoop, (code (opResSnd !! 1))== CLOSE_CURLY_BRACKET]] = (Nothing, tail opResSnd)
@@ -58,12 +62,14 @@ testAssignment lst = case lst of
     otherwise -> makeSyntaxError (position $ head lst) "Illegal assignment expression"
 
 testExpr :: [Lexeme] -> (Maybe String, [Lexeme])
+testExpr [] = (Just "There must be expression!", [])
 testExpr lst@(x:xs)
     | and[xCode /= ID, 
           xCode /= CONST, 
           xCode /= OPEN_PARENTHESIS] 
       = makeSyntaxError (position x) $ "Illegal expression. It must starts with 'id' or '(' or 'const'. Actual " ++ (show xCode)
     | not isTerm = termRes
+    | null afterTermLst = (Nothing, [])
     | or [nextLexCode == PLUS, 
           nextLexCode == MINUS] = testExpr (tail afterTermLst)
     | otherwise = (Nothing, afterTermLst)
@@ -80,6 +86,7 @@ testTerm lst@(x:xs)
           xCode /= OPEN_PARENTHESIS] 
       = makeSyntaxError (position x) ("Illegal term. It must starts with 'id' or '(' or 'const'. Actual " ++ (show xCode))
     | not isMnoj = mnojRes
+    | null afterMnojLst = (Nothing, [])
     | or [nextLexCode == MULTIPLY, 
           nextLexCode == DIVIDE] = testTerm (tail afterMnojLst)
     | otherwise = (Nothing, afterMnojLst)
@@ -99,20 +106,70 @@ testMnoj lst@(x:xs)
         let exprRes = testExpr xs
             afterExpr = snd exprRes
             isExpr = isNothing (fst exprRes)
-        in if (and[isExpr, code (head afterExpr) == CLOSE_PARANTHESIS])
+        in if (and[isExpr, (length afterExpr) > 0, (code (head afterExpr)) == CLOSE_PARANTHESIS])
            then (Nothing, tail afterExpr)
            else if (isExpr) then makeSyntaxError (position $ head afterExpr) "There must be ')'"
                             else exprRes
     where xCode = (code x)
 
+testRead :: [Lexeme] -> (Maybe String, [Lexeme])
+testRead lst@(x:y:zs)
+    | xCode /= READ = makeSyntaxError posx ("There must be read statement!. Actual " ++ (show x))
+    | yCode /= OPEN_PARENTHESIS = makeSyntaxError posy ("There must be '('. Actual " ++ (show y))
+    | isJust (fst testIds) = testIds
+    | null afterLst = makeSyntaxError (position $ head zs) "There must be ')'. Actua - Nothing"
+    | afterCode /= CLOSE_PARANTHESIS = makeSyntaxError (posClose) ("There must be ')'. Actual " ++ (show afterCode))
+    | otherwise = (Nothing, tail afterLst)
+    where xCode = code x
+          yCode = code y
+          posy = position y
+          posx = position x
+          testIds = testIdList zs
+          afterLst = (snd testIds)
+          aft = head afterLst
+          afterCode = code aft
+          posClose = position aft
+testIdList :: [Lexeme] -> (Maybe String, [Lexeme])
+testIdList (x:y:xs)
+    | xCode /= ID = makeSyntaxError posx ("There must be id, but there is " ++ (show x))
+    | yCode /= COMMA = (Nothing, y:xs)
+    | yCode == COMMA = testIdList xs
+    where xCode = code x
+          yCode = code y
+          posx =position x
 
-testRead _ = (Nothing, [])
-testWrite _ = (Nothing, [])
+testWrite :: [Lexeme] -> (Maybe String, [Lexeme])
+testWrite lst@(x:y:zs)
+    | xCode /= WRITE = makeSyntaxError posx ("There must be write statement!. Actual " ++ (show x))
+    | yCode /= OPEN_PARENTHESIS = makeSyntaxError posy ("There must be '('. Actual " ++ (show y))
+    | isJust (fst testStrIdLst) = testStrIdLst
+    | null afterLst = makeSyntaxError (position $ head zs) "There must be ')'. Actual - Nothing"
+    | afterCode /= CLOSE_PARANTHESIS = makeSyntaxError (posClose) ("There must be ')'. Actual " ++ (show afterCode))
+    | otherwise = (Nothing, tail afterLst)
+    where xCode = code x
+          yCode = code y
+          posy = position y
+          posx = position x
+          testStrIdLst = testIdStringList zs
+          afterLst = (snd testStrIdLst)
+          aft = head afterLst
+          afterCode = code aft
+          posClose = position aft
+
+
+testIdStringList :: [Lexeme] -> (Maybe String, [Lexeme])
+testIdStringList (x:y:xs)
+    | and[xCode /= ID, xCode /= STRING] = makeSyntaxError posx ("There must be id or string, but there is " ++ (show x))
+    | yCode /= COMMA = (Nothing, y:xs)
+    | yCode == COMMA = testIdStringList xs
+    where xCode = code x
+          yCode = code y
+          posx =position x
 testIf _ = (Nothing, [])
 testDoWhile _ = (Nothing, [])
 
 
-testIdList _ = (Nothing, [])
+
 
 
 {-
