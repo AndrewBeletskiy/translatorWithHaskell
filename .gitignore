@@ -7,3 +7,5 @@ Types.o
 Types.hi
 LexicalAnalyzer.o
 LexicalAnalyzer.hi
+SyntaxAnalyzer.o
+SyntaxAnalyzer.hi
