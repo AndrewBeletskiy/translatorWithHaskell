@@ -26,4 +26,7 @@
 <float>       ::= <fixed>|<fixed>E<order>
 <order>       ::= <int>|<sign><int>
 <fixed>       ::= <int>|<int>.<int>|.<int>
-<цбз>         ::= <digit>|<int><digit>
+<int>         ::= <digit>|<int><digit>
+
+// - one line commentary
+
