@@ -5,7 +5,7 @@ import Data.Maybe
 import Types
 
 lexicalAnalyzer :: String -> Either [Lexeme] String
-lexicalAnalyzer text = f (convertToMyString $ unComment $ text++" ") 1 [] []
+lexicalAnalyzer text = f (convertToMyString $ unComment $ text++"\n") 1 [] []
   where
     f [] state curStr res
         | state < 0 = Right curStr
