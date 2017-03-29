@@ -55,21 +55,17 @@ data LexemeCode = READ|WRITE|IF|THEN
                   |BP|UPL|LABEL|BOOL 
                   deriving (Show, Eq)
 
-data LexemeValueType = StrValue String | NumValue Double
+data LexemeValueType = StrValue String 
+                     | NumValue Double 
+                     | LabelValue Int 
+                     | BoolValue Bool 
+                     | ListValue LexemeValueType LexemeValueType
+                     | NoneValue
 instance Show LexemeValueType where
   show (StrValue str) = str
   show (NumValue n) = (show n)
-
-getIntLexemeValue lex = fromEnum $ getDoubleLexemeValue lex
-getDoubleLexemeValue  (Lexeme val code pos) = 
-  let f (NumValue n) = n
-  in f val
-
-getStrLexemeValue (Lexeme val code pos) = 
-  let f (StrValue str) = str
-  in f val
-
-  
+  show (LabelValue num) = "m("++(show num)++")"
+  show (ListValue l1 l2) = (show l1)++" "++(show l2)
 
 data Lexeme = Lexeme {value :: LexemeValueType, code :: LexemeCode, position :: Position}
 
@@ -78,3 +74,50 @@ instance Show Lexeme where
 
 getLexemeTableText :: [Lexeme] -> String
 getLexemeTableText lexs = unlines $ map show lexs
+
+
+{--|         GETTERS           |--}
+getIntLexemeValue :: Lexeme -> Int
+getIntLexemeValue lex = fromEnum $ getDoubleLexemeValue lex
+
+getDoubleLexemeValue :: Lexeme -> Double
+getDoubleLexemeValue  (Lexeme (NumValue n) _ _) = n
+
+getStrLexemeValue :: Lexeme -> String
+getStrLexemeValue (Lexeme (StrValue str) _ _) = str
+
+getBoolLexemeValue :: Lexeme -> Bool
+getBoolLexemeValue (Lexeme (BoolValue b) _ _)=b
+
+getLabelValue :: Lexeme -> Int
+getLabelValue (Lexeme (LabelValue num) _ _) = num
+  
+
+makeFullLexeme :: LexemeCode -> Position -> Int -> Int -> Lexeme
+makeFullLexeme code pos l1 l2
+  | code == IF = Lexeme (ListValue (StrValue "if") (ListValue (LabelValue l1) (LabelValue l2))) IF pos
+  | code == DO = Lexeme (ListValue (StrValue "do") (ListValue (LabelValue l1) (LabelValue l2))) DO pos
+  | otherwise = error "There must be if or do"
+
+makeDoDefault :: Position -> Lexeme
+makeDoDefault pos = makeFullLexeme DO pos (-1) (-1)
+
+makeIfDefault :: Position -> Lexeme
+makeIfDefault pos = makeFullLexeme IF pos (-1) (-1)
+
+setFstLabelValue :: Lexeme -> Int -> Lexeme
+setFstLabelValue lex@(Lexeme val code pos) newVal = changeList val newVal
+  where changeList (ListValue main(ListValue (LabelValue _) (LabelValue l2))) newVal = makeFullLexeme code pos newVal l2
+
+setSndLabelValue :: Lexeme -> Int -> Lexeme
+setSndLabelValue lex@(Lexeme val code pos) newVal = changeList val newVal
+  where changeList (ListValue main(ListValue (LabelValue l1) (LabelValue _))) newVal = makeFullLexeme code pos l1 newVal
+
+getFstLabelValue :: Lexeme  -> Int
+getFstLabelValue (Lexeme (ListValue _ (ListValue (LabelValue l1) (LabelValue _))) _ _) = l1
+
+getSndLabelValue :: Lexeme -> Int
+getSndLabelValue (Lexeme (ListValue _ (ListValue (LabelValue _) (LabelValue l2))) _ _) = l2
+
+isLabel :: Lexeme
+isLabel (Lexeme val code pos) = case lex of (LabelValue _) -> True; otherwise -> False
