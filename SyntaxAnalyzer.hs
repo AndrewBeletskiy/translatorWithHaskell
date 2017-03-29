@@ -165,25 +165,155 @@ testIdStringList (x:y:xs)
     where xCode = code x
           yCode = code y
           posx =position x
-testIf _ = (Nothing, [])
-testDoWhile _ = (Nothing, [])
+
+testLogExpr :: [Lexeme] -> (Maybe String, [Lexeme])
+testLogExpr [] = (Just "There must be expression!", [])
+testLogExpr lst@(x:xs)
+    | and[xCode /= ID, 
+          xCode /= CONST, 
+          xCode /= OPEN_BRACKET,
+          xCode /= NOT,
+          xCode /= OPEN_PARENTHESIS] 
+      = makeSyntaxError (position x) $ "Illegal expression. It must starts with 'id' or '[' or 'const'. Actual " ++ (show xCode)
+    | not isLogTerm = logTermRes
+    | null afterLogTermLst = (Nothing, [])
+    | nextLexCode == OR = testLogExpr (tail afterLogTermLst)
+    | otherwise = (Nothing, afterLogTermLst)
+    where xCode = (code x)
+          logTermRes = testLogTerm lst
+          afterLogTermLst = snd logTermRes
+          nextLexCode  = code $ head afterLogTermLst
+          isLogTerm = isNothing (fst logTermRes)
 
 
+testLogTerm :: [Lexeme] -> (Maybe String, [Lexeme])
+testLogTerm [] = (Just "There must be logical term",[])
+testLogTerm lst@(x:xs)
+    | and[xCode /= ID, 
+          xCode /= CONST, 
+          xCode /= OPEN_BRACKET,
+          xCode /= NOT,
+          xCode /= OPEN_PARENTHESIS]  
+      = makeSyntaxError (position x) ("Illegal term. It must starts with 'id' or '[' or 'const'. Actual " ++ (show xCode))
+    | not isLogMnoj = logMnojRes
+    | null afterMnojLst = (Nothing, [])
+    | nextLexCode == AND = testLogTerm (tail afterMnojLst)
+    | otherwise = (Nothing, afterMnojLst)
+    where xCode = (code x)
+          logMnojRes = testLogMnoj lst
+          afterMnojLst = snd logMnojRes
+          nextLexCode  = code $ head afterMnojLst
+          isLogMnoj = isNothing (fst logMnojRes)
 
+testLogMnoj :: [Lexeme] -> (Maybe String, [Lexeme])
+testLogMnoj [] = (Just "There must be assignment operator",[])
+testLogMnoj lst@(x:xs)
+    | xCode == OPEN_BRACKET = 
+        let exprRes = testLogExpr xs
+            afterExpr = snd exprRes
+            isExpr = isNothing (fst exprRes)
+        in if (and[isExpr, (length afterExpr) > 0, (code (head afterExpr)) == CLOSE_BRACKET])
+           then (Nothing, tail afterExpr)
+           else if (isExpr && not (null afterExpr))
+                then makeSyntaxError (position $ head afterExpr) "There must be ']'"
+                else if (null afterExpr) 
+                     then makeSyntaxError (position x) "There must be ']'"
+                     else exprRes
+    | xCode == NOT = testLogTerm xs
+    | otherwise = testRelation (x:xs)
+    where xCode = (code x)
 
+testRelation :: [Lexeme] -> (Maybe String, [Lexeme])
+testRelation [] = (Just "There must be a relation statement.", [])
+testRelation lst@(x:xs)
+    | not isFirstExpr = fstExprRes
+    | length aftFstExpr < 2 = makeSyntaxError (position x) "There must be a relation statement"
+    | not isRelSign = makeSyntaxError (position relLex) "There must be a relation sign such as '>', '<', '<=' '>=' '=' '!='"
+    | not isSndExpr = sndExprRes
+    | otherwise = (Nothing, aftSndExpr)
+    where fstExprRes = testExpr lst
+          aftFstExpr = (snd fstExprRes)
+          relLex = head aftFstExpr
+          relCode = code relLex
+          isRelSign = or[ relCode == MORE
+                        , relCode == LESS
+                        , relCode == MORE_OR_EQUAL
+                        , relCode == LESS_OR_EQUAL
+                        , relCode == EQUAL
+                        , relCode == NOT_EQUAL
+                        ]
+          sndExprRes = testExpr (tail aftFstExpr)
+          aftSndExpr = snd sndExprRes
+          isFirstExpr = isNothing (fst fstExprRes)
+          isSndExpr = isNothing (fst sndExprRes)
 
-{-
-data LexemeCode = READ|WRITE|IF|THEN
-                  |ELSE|DO|WHILE|END|OR
-                  |NOT|AND|OPEN_CURLY_BRACKET
-                  |CLOSE_CURLY_BRACKET
-                  |OPEN_PARENTHESIS
-                  |CLOSE_PARANTHESIS
-                  |OPEN_BRACKET|CLOSE_BRACKET
-                  |PLUS|MINUS|MULTIPLY|DIVIDE
-                  |SEMICOLON|COMMA|ASSIGNMENT
-                  |EQUAL|MORE|LESS|MORE_OR_EQUAL
-                  |LESS_OR_EQUAL|NOT_EQUAL
-                  |ID|CONST|STRING
-                  |BP|UPL|LABEL|BOOL 
--}
+testIf :: [Lexeme] -> (Maybe String, [Lexeme])
+testIf [] = (Just "There must be if statement.", [])
+testIf lst@(x:xs)
+    | xCode /= IF = makeSyntaxError posx "There must be 'if'"
+    | null xs = makeSyntaxError posx "There must be a logical expression"
+    | not isLogExpr = logExprRes
+    | null aftLogExpr = makeSyntaxError (position $ last xs) "There must be a 'then'"
+    | mbThenCode /= THEN = makeSyntaxError (position mbThenLex) "There must be 'then'"
+    | null aftThen = makeSyntaxError (nextPosition $ position mbThenLex) "There must be operator"
+    | not isFstOp = fstOpRes
+    | null aftFstOp = makeSyntaxError (nextPosition $ position $ last aftThen) "There must be 'else'"
+    | mbElseCode /= ELSE = makeSyntaxError (position mbElseLex) "There must be 'else'"
+    | null aftElse = makeSyntaxError (nextPosition $ position mbElseLex) "There must be operator"
+    | not isSndOp = sndOpRes
+    | otherwise = (Nothing, (snd sndOpRes))
+    where aftElse = tail aftFstOp
+          aftFstOp = snd fstOpRes
+          aftLogExpr = snd logExprRes
+          aftThen = tail aftLogExpr
+          fstOpRes = testOp aftThen
+          sndOpRes = testOp aftElse
+          isFstOp = isNothing (fst fstOpRes)
+          isLogExpr = isNothing (fst logExprRes)
+          isSndOp = isNothing (fst sndOpRes)
+          logExprRes = testLogExpr xs
+          mbElseCode = code mbElseLex
+          mbElseLex = head aftFstOp
+          mbThenCode = code mbThenLex
+          mbThenLex = head aftLogExpr
+          posx = position x
+          xCode = code x
+
+testDoWhile :: [Lexeme] -> (Maybe String, [Lexeme])
+testDoWhile [] = (Just "There must be 'do'", [])
+testDoWhile [x]
+  | (code x) == DO = makeSyntaxError (nextPosition $ position x) "There must be 'while'"
+  | otherwise = makeSyntaxError (position x) "There must be 'do'"
+
+testDoWhile (mbDo:mbWhile:mbPar:aftPar)
+  | mbDoCode /= DO = makeSyntaxError (position mbDo) "There must be 'do'"
+  | mbWhileCode /= WHILE = makeSyntaxError (position mbWhile) "There must be 'while'"
+  | code mbPar /= OPEN_PARENTHESIS = makeSyntaxError (position mbPar) "There must be '('"
+  | null aftPar = makeSyntaxError (nextPosition $ position mbPar) "There must be a logical expression"
+  | not isLogExpr = logExprRes--makeSyntaxError (position $ head aftPar) "There must be a logical expression"
+  | ((length aftLog) < 2) = makeSyntaxError (nextPosition  $ position $ last aftPar) "There must be ');'"
+  | mbClParCode /= CLOSE_PARANTHESIS = makeSyntaxError (position mbClPar) "There must be ')'"
+  | mbSemiCode /= SEMICOLON = makeSyntaxError (position mbSemi) "There must be ';'"
+  | null aftSemi = makeSyntaxError (nextPosition $ position mbSemi) "There must be list of operators"
+  | not isOpList = opListRes--makeSyntaxError (position $ head aftSemi) "There must be list of operators"
+  | null aftOpList = makeSyntaxError (nextPosition $ position $ last aftSemi) "There must be 'end'"
+  | mbEndCode /= END = makeSyntaxError (position $ head aftOpList) "There must be 'end'"
+  | otherwise = (Nothing, aftEnd)
+  where
+    mbDoCode = code mbDo
+    posDo = position mbDo
+    mbWhileCode = code mbWhile
+    posWhile = position mbWhile
+    logExprRes = testLogExpr aftPar
+    isLogExpr = isNothing (fst logExprRes)
+    aftLog = (snd logExprRes)
+    mbClPar = head aftLog
+    mbClParCode = code mbClPar
+    mbSemi = aftLog !! 1
+    mbSemiCode = code mbSemi
+    aftSemi = drop 2 aftLog
+    opListRes = testOpList aftSemi True 
+    isOpList = isNothing (fst opListRes)
+    aftOpList = snd opListRes
+    mbEndCode = code $ head aftOpList
+    aftEnd = tail aftOpList

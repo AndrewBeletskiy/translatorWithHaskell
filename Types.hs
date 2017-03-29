@@ -5,6 +5,13 @@ data Position = Position Int Int
 instance Show Position where
     show (Position l c) = "(" ++ (show l) ++ ";" ++ (show c) ++ ")"
 
+nextPosition :: Position -> Position
+nextPosition (Position line number) = Position line (number + 1)
+
+prevPosition :: Position -> Position
+prevPosition (Position line number) = Position line (number-1)
+
+
 
 -- Char with position TYPE
 data MyChar = MyChar {charVal::Char, charPos::Position}

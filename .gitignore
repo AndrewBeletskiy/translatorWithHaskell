@@ -9,3 +9,4 @@ LexicalAnalyzer.o
 LexicalAnalyzer.hi
 SyntaxAnalyzer.o
 SyntaxAnalyzer.hi
+foreverRun.bat

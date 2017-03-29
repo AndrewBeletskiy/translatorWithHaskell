@@ -10,16 +10,17 @@ import Types as TP
 
 
 main = do
-    print "Hello"
+    print "SyntaxAnalyzer"
     {-
     args <- getArgs
     let fileName = head args
     content <- readFile $ fileName
      -}
     content <- readFile "test.txt"
-    let a = lexicalAnalyzer content
-    let toPrint = maybe "OK" show (synt content)
-    putStrLn toPrint
+    let a = synt content
+    putStrLn $ if (isJust a) 
+               then fromJust a 
+               else "OK"
 
 testProgram [] = False
 testProgram text
