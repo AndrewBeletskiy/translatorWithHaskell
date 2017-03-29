@@ -5,7 +5,7 @@ import Data.Maybe
 import Types
 
 lexicalAnalyzer :: String -> Either [Lexeme] String
-lexicalAnalyzer text = f (convertToMyString $ unComment $ text++"\n") 1 [] []
+lexicalAnalyzer text = f (convertToMyString $ unComment $ replaceTab $ text++"\n") 1 [] []
   where
     f [] state curStr res
         | state < 0 = Right curStr
@@ -130,6 +130,11 @@ unComment (x:y:xs)
   | x /= '/' = x:(unComment $ y:xs)
   | y /= '/' = x:(unComment $ y:xs)
   | otherwise = unComment $ tail $ dropWhile (/='\n') xs
+replaceTab :: [Char] -> [Char]
+replaceTab [] = []
+replaceTab (x:xs)
+  | x == '\t' = "    " ++ (replaceTab xs)
+  | otherwise = x:(replaceTab xs)
 
 
 findLexemeCodeOrID :: [Char] -> LexemeCode

@@ -26,8 +26,9 @@ testOpList :: [Lexeme] -> Bool ->(Maybe String, [Lexeme])
 testOpList [] _ = (Just "There must be operator list but it didn't", [])
 testOpList lst@(x:xs) isWhileLoop
     | isJust opResFst = opRes
-    | and[length opResSnd > 0, code afterOp /= SEMICOLON] = 
-        makeSyntaxError (position afterOp) "There must be a semicolon"
+    | null opResSnd = makeSyntaxError (nextPosition $ position $ last lst) "There must be ';'"
+    | code afterOp /= SEMICOLON = 
+        makeSyntaxError (position afterOp) "There must be ';'"
     | length opResSnd < 2 = (Nothing, opResSnd)
     | code afterOp /= SEMICOLON = makeSyntaxError (position afterOp) "There must be a semicolon after operator"
     | or [and[isWhileLoop, (code (opResSnd !! 1)) == END], 
@@ -55,7 +56,8 @@ testAssignment [] = (Just "There must be assignment operator",[])
 testAssignment lst = case lst of
     (x:y:zs) ->
         if (and[xCode == ID, yCode == ASSIGNMENT]) 
-            then testExpr zs
+            then if null zs then makeSyntaxError (nextPosition $ position y) "There must be expression."
+                            else testExpr zs
             else makeSyntaxError (position $ head lst) "Illegal assignment expression"
         where xCode = (code x)
               yCode = (code y)
@@ -71,12 +73,15 @@ testExpr lst@(x:xs)
     | not isTerm = termRes
     | null afterTermLst = (Nothing, [])
     | or [nextLexCode == PLUS, 
-          nextLexCode == MINUS] = testExpr (tail afterTermLst)
+          nextLexCode == MINUS] = if (null (tail afterTermLst)) 
+                                  then makeSyntaxError (nextPosition $ position nextLex) "There must be expression"
+                                  else testExpr (tail afterTermLst)
     | otherwise = (Nothing, afterTermLst)
     where xCode = (code x)
           termRes = testTerm lst
           afterTermLst = snd termRes
-          nextLexCode  = code $ head afterTermLst
+          nextLex = head afterTermLst
+          nextLexCode  = code nextLex
           isTerm = isNothing (fst termRes)
 
 testTerm :: [Lexeme] -> (Maybe String, [Lexeme])
